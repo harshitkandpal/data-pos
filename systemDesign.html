@@ -1,0 +1,283 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>PoisonGuard Architecture (Canvas)</title>
+    <style>
+      body {
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+          Helvetica, Arial, sans-serif;
+        background-color: #f4f7f6;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        padding: 20px;
+        flex-direction: column;
+      }
+      canvas {
+        background-color: #ffffff;
+        border: 1px solid #d0d7de;
+        border-radius: 10px;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+      }
+    </style>
+  </head>
+  <body>
+    <h2>PoisonGuard: System Architecture</h2>
+    <canvas id="archCanvas" width="600" height="710"></canvas>
+
+    <script>
+      document.addEventListener("DOMContentLoaded", () => {
+        const canvas = document.getElementById("archCanvas");
+        const ctx = canvas.getContext("2d");
+        const canvasWidth = canvas.width;
+
+        // --- Helper Functions ---
+
+        function drawRoundedRect(x, y, width, height, radius, fill, stroke) {
+          ctx.fillStyle = fill;
+          ctx.strokeStyle = stroke;
+          ctx.lineWidth = 2;
+          ctx.beginPath();
+          ctx.moveTo(x + radius, y);
+          ctx.lineTo(x + width - radius, y);
+          ctx.quadraticCurveTo(x + width, y, x + width, y + radius);
+          ctx.lineTo(x + width, y + height - radius);
+          ctx.quadraticCurveTo(
+            x + width,
+            y + height,
+            x + width - radius,
+            y + height
+          );
+          ctx.lineTo(x + radius, y + height);
+          ctx.quadraticCurveTo(x, y + height, x, y + height - radius);
+          ctx.lineTo(x, y + radius);
+          ctx.quadraticCurveTo(x, y, x + radius, y);
+          ctx.closePath();
+          ctx.fill();
+          ctx.stroke();
+        }
+
+        function drawText(text, x, y, font, fill, align = "center") {
+          ctx.fillStyle = fill;
+          ctx.font = font;
+          ctx.textAlign = align;
+          ctx.fillText(text, x, y);
+        }
+
+        function wrapText(
+          context,
+          text,
+          x,
+          y,
+          maxWidth,
+          lineHeight,
+          font,
+          fill,
+          align = "left"
+        ) {
+          ctx.fillStyle = fill;
+          ctx.font = font;
+          ctx.textAlign = align;
+          let words = text.split(" ");
+          let line = "";
+          let startX = x;
+
+          if (align === "center") {
+            startX = canvasWidth / 2;
+          }
+
+          for (let n = 0; n < words.length; n++) {
+            let testLine = line + words[n] + " ";
+            let metrics = context.measureText(testLine);
+            let testWidth = metrics.width;
+            if (testWidth > maxWidth && n > 0) {
+              context.fillText(line, startX, y);
+              line = words[n] + " ";
+              y += lineHeight;
+            } else {
+              line = testLine;
+            }
+          }
+          context.fillText(line, startX, y);
+        }
+
+        function drawArrow(x, fromY, toY, label) {
+          ctx.beginPath();
+          ctx.moveTo(x, fromY);
+          ctx.lineTo(x, toY);
+          ctx.strokeStyle = "#333";
+          ctx.lineWidth = 2;
+          ctx.stroke();
+
+          // Down arrow
+          ctx.beginPath();
+          ctx.moveTo(x, toY);
+          ctx.lineTo(x - 6, toY - 8);
+          ctx.lineTo(x + 6, toY - 8);
+          ctx.closePath();
+          ctx.fillStyle = "#333";
+          ctx.fill();
+
+          // Up arrow (for bidirectional)
+          if (label.includes("Requests")) {
+            ctx.beginPath();
+            ctx.moveTo(x, fromY);
+            ctx.lineTo(x - 6, fromY + 8);
+            ctx.lineTo(x + 6, fromY + 8);
+            ctx.closePath();
+            ctx.fillStyle = "#333";
+            ctx.fill();
+          }
+
+          drawText(
+            label,
+            x + 10,
+            fromY + (toY - fromY) / 2,
+            "12px sans-serif",
+            "#555",
+            "left"
+          );
+        }
+
+        // --- Draw Diagram ---
+        let y = 30;
+        const midX = canvasWidth / 2;
+
+        // 1. User
+        drawRoundedRect(midX - 150, y, 300, 50, 10, "#f3f4f6", "#d1d5db");
+        drawText(
+          "User (Data Scientist / Analyst)",
+          midX,
+          y + 30,
+          "bold 14px sans-serif",
+          "#333"
+        );
+        y += 50;
+
+        // Arrow 1
+        drawArrow(midX, y + 10, y + 50, "HTTP Requests / JSON Results");
+        y += 60; // Reduced gap from 70
+
+        // 2. Client Layer
+        drawRoundedRect(midX - 250, y, 500, 120, 10, "#eff6ff", "#3b82f6");
+        drawText(
+          "Client Layer (Browser)",
+          midX,
+          y + 30,
+          "bold 16px sans-serif",
+          "#333"
+        );
+        drawText(
+          "Tech: React / Vue.js + Plotly.js",
+          midX,
+          y + 55,
+          "13px sans-serif",
+          "#555"
+        );
+        wrapText(
+          ctx,
+          "• Handles data upload & config • Renders interactive review dashboard • Visualizes flagged data",
+          60,
+          y + 80,
+          480,
+          20,
+          "13px sans-serif",
+          "#333",
+          "left"
+        );
+        y += 120;
+
+        // Arrow 2
+        drawArrow(midX, y + 10, y + 50, "API Calls (Uploads, Config)");
+        y += 60; // Reduced gap from 70
+
+        // 3. Backend Layer (Main Box)
+        const backendHeight = 350;
+        drawRoundedRect(
+          midX - 290,
+          y,
+          580,
+          backendHeight,
+          10,
+          "#f8f8f8",
+          "#333"
+        );
+        // Backend Title
+        ctx.fillStyle = "#333";
+        ctx.fillRect(midX - 290, y, 580, 40);
+        drawRoundedRect(midX - 290, y, 580, 40, 10, "#333", "#333"); // for top corners
+        ctx.beginPath(); // clear top rect path
+        drawText(
+          "Backend / Server Infrastructure",
+          midX,
+          y + 25,
+          "bold 16px sans-serif",
+          "white"
+        );
+        y += 60; // Start content below title
+
+        // 3a. API Gateway
+        drawRoundedRect(midX - 270, y, 260, 260, 10, "#fff0f0", "#ef4444");
+        drawText(
+          "Flask REST API Gateway",
+          midX - 140,
+          y + 30,
+          "bold 15px sans-serif",
+          "#333",
+          "center"
+        );
+        drawText(
+          "Tech: Flask (Python)",
+          midX - 140,
+          y + 55,
+          "13px sans-serif",
+          "#555",
+          "center"
+        );
+        wrapText(
+          ctx,
+          "• Routes user requests • Manages data processing jobs • (Future) Handles auth",
+          midX - 260,
+          y + 80,
+          240,
+          20,
+          "13px sans-serif",
+          "#333",
+          "left"
+        );
+
+        // 3b. ML Services
+        drawRoundedRect(midX + 10, y, 260, 260, 10, "#fefce8", "#eab308");
+        drawText(
+          "Core ML Services",
+          midX + 140,
+          y + 30,
+          "bold 15px sans-serif",
+          "#333",
+          "center"
+        );
+        drawText(
+          "Tech: Python, Pandas, Sklearn...",
+          midX + 140,
+          y + 55,
+          "13px sans-serif",
+          "#555",
+          "center"
+        );
+        wrapText(
+          ctx,
+          "• Runs the 3-Phase Pipeline • Tabular Module (IF, LGBM) • Text Module (Regex, S-BERT) • Image Module (Pixel, CNN)",
+          midX + 20,
+          y + 80,
+          240,
+          20,
+          "13px sans-serif",
+          "#333",
+          "left"
+        );
+      });
+    </script>
+  </body>
+</html>

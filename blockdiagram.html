@@ -1,0 +1,253 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>PoisonGuard Pipeline (Canvas)</title>
+    <style>
+      body {
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+          Helvetica, Arial, sans-serif;
+        background-color: #f4f7f6;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        padding: 20px;
+        flex-direction: column;
+      }
+      canvas {
+        background-color: #ffffff;
+        border: 1px solid #d0d7de;
+        border-radius: 10px;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+      }
+    </style>
+  </head>
+  <body>
+    <h2>PoisonGuard: Sanitization Pipeline</h2>
+    <canvas id="pipelineCanvas" width="500" height="820"></canvas>
+
+    <script>
+      document.addEventListener("DOMContentLoaded", () => {
+        const canvas = document.getElementById("pipelineCanvas");
+        const ctx = canvas.getContext("2d");
+        const canvasWidth = canvas.width;
+        const boxWidth = 400;
+        const boxHeight = 70;
+        const x = (canvasWidth - boxWidth) / 2; // Centered
+        let y = 30;
+        const gap = 35; // Reduced gap from 45
+
+        // --- Helper Functions ---
+
+        function drawArrow(fromY, toY) {
+          ctx.beginPath();
+          ctx.moveTo(canvasWidth / 2, fromY);
+          ctx.lineTo(canvasWidth / 2, toY);
+          ctx.strokeStyle = "#333";
+          ctx.lineWidth = 2;
+          ctx.stroke();
+
+          ctx.beginPath();
+          ctx.moveTo(canvasWidth / 2, toY);
+          ctx.lineTo(canvasWidth / 2 - 6, toY - 8);
+          ctx.lineTo(canvasWidth / 2 + 6, toY - 8);
+          ctx.closePath();
+          ctx.fillStyle = "#333";
+          ctx.fill();
+        }
+
+        function drawRoundedRect(x, y, width, height, radius, fill, stroke) {
+          ctx.fillStyle = fill;
+          ctx.strokeStyle = stroke;
+          ctx.lineWidth = 2;
+          ctx.beginPath();
+          ctx.moveTo(x + radius, y);
+          ctx.lineTo(x + width - radius, y);
+          ctx.quadraticCurveTo(x + width, y, x + width, y + radius);
+          ctx.lineTo(x + width, y + height - radius);
+          ctx.quadraticCurveTo(
+            x + width,
+            y + height,
+            x + width - radius,
+            y + height
+          );
+          ctx.lineTo(x + radius, y + height);
+          ctx.quadraticCurveTo(x, y + height, x, y + height - radius);
+          ctx.lineTo(x, y + radius);
+          ctx.quadraticCurveTo(x, y, x + radius, y);
+          ctx.closePath();
+          ctx.fill();
+          ctx.stroke();
+        }
+
+        function drawBox(textLines, x, y, width, height, color, borderColor) {
+          drawRoundedRect(x, y, width, height, 10, color, borderColor);
+
+          ctx.fillStyle = "#333";
+          ctx.font = "14px sans-serif";
+          ctx.textAlign = "center";
+          const lineHeight = 18;
+          let startY = y + (height - textLines.length * lineHeight) / 2 + 14;
+
+          if (textLines.length > 1) {
+            ctx.font = "bold 14px sans-serif";
+            ctx.fillText(textLines[0], canvasWidth / 2, startY);
+            ctx.font = "13px sans-serif";
+            for (let i = 1; i < textLines.length; i++) {
+              ctx.fillText(
+                textLines[i],
+                canvasWidth / 2,
+                startY + i * lineHeight
+              );
+            }
+          } else {
+            ctx.fillText(
+              textLines[0],
+              canvasWidth / 2,
+              startY - lineHeight / 4
+            );
+          }
+        }
+
+        // --- FIXED drawPhaseBox Function ---
+        function drawPhaseBox(title, lines, x, y, width, height) {
+          // Draw main box shape
+          drawRoundedRect(x, y, width, height, 10, "#f0f9ff", "#7dd3fc");
+
+          // Draw title header
+          ctx.fillStyle = "#0284c7";
+          ctx.beginPath();
+          ctx.moveTo(x + 10, y);
+          ctx.lineTo(x + width - 10, y);
+          ctx.quadraticCurveTo(x + width, y, x + width, y + 10);
+          ctx.lineTo(x + width, y + 28); // Header height
+          ctx.lineTo(x, y + 28); // Header height
+          ctx.lineTo(x, y + 10);
+          ctx.quadraticCurveTo(x, y, x + 10, y);
+          ctx.closePath();
+          ctx.fill();
+
+          // Draw title text
+          ctx.fillStyle = "white";
+          ctx.font = "bold 12px sans-serif";
+          ctx.textAlign = "center";
+          ctx.fillText(title, canvasWidth / 2, y + 19);
+
+          // Draw content text (BELOW the header)
+          ctx.fillStyle = "#333";
+          const lineHeight = 18;
+          const contentHeight = height - 28; // Remaining space
+          let startY =
+            y + 28 + (contentHeight - lines.length * lineHeight) / 2 + 14;
+
+          ctx.font = "bold 14px sans-serif";
+          ctx.fillText(lines[0], canvasWidth / 2, startY);
+          ctx.font = "13px sans-serif";
+          for (let i = 1; i < lines.length; i++) {
+            ctx.fillText(lines[i], canvasWidth / 2, startY + i * lineHeight);
+          }
+        }
+
+        // --- Draw Diagram ---
+
+        // 1. Input Dataset
+        drawBox(
+          ["Input Dataset", "(CSV, JSONL, Image Folder)"],
+          x,
+          y,
+          boxWidth,
+          boxHeight,
+          "#e0e7ff",
+          "#c7d2fe"
+        );
+        drawArrow(y + boxHeight, y + boxHeight + gap - 5);
+        y += boxHeight + gap;
+
+        // 2. User Configuration
+        drawBox(
+          ["User Configuration", "Define Target, ML Task, and Constraints"],
+          x,
+          y,
+          boxWidth,
+          boxHeight,
+          "#ffffff",
+          "#d0d7de"
+        );
+        drawArrow(y + boxHeight, y + boxHeight + gap - 5);
+        y += boxHeight + gap;
+
+        // 3. Phase 1
+        drawPhaseBox(
+          "PHASE 1: THE GATEKEEPER",
+          ["Initial Validation", "Schema, Data Type, Range/Length Checks"],
+          x,
+          y,
+          boxWidth,
+          boxHeight
+        );
+        drawArrow(y + boxHeight, y + boxHeight + gap - 5);
+        y += boxHeight + gap;
+
+        // 4. Phase 2
+        drawPhaseBox(
+          "PHASE 2: THE DETECTIVE",
+          [
+            "Statistical Anomaly Detection",
+            "Isolation Forest, Z-Score, Outlier Embeddings",
+          ],
+          x,
+          y,
+          boxWidth,
+          boxHeight
+        );
+        drawArrow(y + boxHeight, y + boxHeight + gap - 5);
+        y += boxHeight + gap;
+
+        // 5. Phase 3
+        drawPhaseBox(
+          "PHASE 3: THE INTERROGATOR",
+          [
+            "Model-Based Label Auditing",
+            "Train Canary Models, Find High-Loss Points",
+          ],
+          x,
+          y,
+          boxWidth,
+          boxHeight
+        );
+        drawArrow(y + boxHeight, y + boxHeight + gap - 5);
+        y += boxHeight + gap;
+
+        // 6. Review Dashboard (taller box)
+        const reviewHeight = 110;
+        drawBox(
+          [
+            "Review & Mitigate Dashboard",
+            "User reviews all flagged data.",
+            "Flags: [Phase 1] [Phase 2] [Phase 3]",
+          ],
+          x,
+          y,
+          boxWidth,
+          reviewHeight,
+          "#fffbeb",
+          "#fde68a"
+        );
+        drawArrow(y + reviewHeight, y + reviewHeight + gap - 5);
+        y += reviewHeight + gap;
+
+        // 7. Export
+        drawBox(
+          ["Export Cleaned Data", "(Sanitized CSV / Dataset)"],
+          x,
+          y,
+          boxWidth,
+          boxHeight,
+          "#e0e7ff",
+          "#c7d2fe"
+        );
+      });
+    </script>
+  </body>
+</html>

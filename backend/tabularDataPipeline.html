@@ -1,0 +1,354 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>PoisonGuard Pipeline (HTML/CSS Diagram)</title>
+    <style>
+      /* --- Basic Setup --- */
+      body {
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+          Helvetica, Arial, sans-serif;
+        background-color: #f4f7fa;
+        color: #333;
+        padding: 20px;
+      }
+
+      h1 {
+        text-align: center;
+        color: #2c3e50;
+        border-bottom: 2px solid #e0e0e0;
+        padding-bottom: 10px;
+      }
+
+      /* --- The Grid Container --- */
+      .pipeline-grid {
+        display: grid;
+        /* We create 3 columns: Frontend, Arrow Lane, Backend */
+        grid-template-columns: 1fr 100px 1fr;
+        /* We define rows as needed, auto-sizing them */
+        grid-auto-rows: min-content;
+        max-width: 1200px;
+        margin: 0 auto;
+        align-items: center; /* Vertically center items in their grid cell */
+      }
+
+      /* --- Swimlane Titles --- */
+      .lane-title {
+        grid-column: 1; /* Spans just the first column */
+        text-align: center;
+        font-size: 1.2em;
+        font-weight: 600;
+        padding: 10px;
+        background: #ddebf7;
+        border-bottom: 3px solid #336699;
+        border-radius: 8px 8px 0 0;
+        margin: 0;
+      }
+
+      .lane-title.backend {
+        grid-column: 3; /* Spans just the third column */
+        background: #f4c7c7;
+        border-bottom-color: #cc0000;
+      }
+
+      /* --- Process Blocks --- */
+      .block {
+        padding: 15px 20px;
+        border: 1px solid #999;
+        border-radius: 5px;
+        text-align: center;
+        font-weight: 500;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+        margin: 10px 20px;
+      }
+
+      .frontend {
+        background: #ddebf7;
+        border-color: #336699;
+      }
+
+      .backend {
+        background: #f4c7c7;
+        border-color: #cc0000;
+      }
+
+      /* A group of blocks, like the Engine */
+      .block-group {
+        background: #fce8e8;
+        border: 1px dashed #cc0000;
+        padding: 10px;
+        margin: 10px 20px;
+        border-radius: 5px;
+      }
+      .block-group strong {
+        display: block;
+        text-align: center;
+        margin-bottom: 10px;
+      }
+      .sub-block {
+        background: #fff;
+        border: 1px solid #f4c7c7;
+        padding: 8px;
+        margin-top: 5px;
+        border-radius: 3px;
+        text-align: center;
+      }
+
+      /* --- Arrow Styling --- */
+      .arrow {
+        position: relative; /* Container for the arrowhead */
+        height: 100%;
+        width: 100%;
+      }
+
+      /* All arrowheads */
+      .arrow::after {
+        content: "";
+        position: absolute;
+        width: 0;
+        height: 0;
+        border-style: solid;
+      }
+
+      /* A simple downward line */
+      .arrow.down {
+        width: 2px;
+        height: 40px;
+        background: #555;
+        margin: 0 auto; /* Center the line */
+      }
+      /* Down arrowhead */
+      .arrow.down::after {
+        bottom: -1px;
+        left: -4px;
+        border-width: 8px 5px 0 5px;
+        border-color: #555 transparent transparent transparent;
+      }
+
+      /* A simple rightward line */
+      .arrow.right {
+        height: 2px;
+        width: 100%;
+        background: #555;
+      }
+      /* Right arrowhead */
+      .arrow.right::after {
+        right: -1px;
+        top: -4px;
+        border-width: 5px 0 5px 8px;
+        border-color: transparent transparent transparent #555;
+      }
+
+      /* A simple leftward line */
+      .arrow.left {
+        height: 2px;
+        width: 100%;
+        background: #555;
+      }
+      /* Left arrowhead */
+      .arrow.left::after {
+        left: -1px;
+        top: -4px;
+        border-width: 5px 8px 5px 0;
+        border-color: transparent #555 transparent transparent;
+      }
+
+      /* Label for an arrow */
+      .arrow[data-label]::before {
+        content: attr(data-label);
+        position: absolute;
+        top: -20px;
+        left: 50%;
+        transform: translateX(-50%);
+        background: #f4f7fa;
+        padding: 2px 5px;
+        font-size: 11px;
+        font-weight: 600;
+        white-space: nowrap;
+      }
+      .arrow.left[data-label]::before,
+      .arrow.right[data-label]::before {
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+      }
+
+      /* --- Grid Placement --- */
+      /* This is where we tell each element which grid cell to live in */
+
+      /* Row 1: Titles */
+      .lane-title.frontend {
+        grid-column: 1;
+        grid-row: 1;
+      }
+      .lane-title.backend {
+        grid-column: 3;
+        grid-row: 1;
+      }
+
+      /* Row 2: Upload */
+      #upload {
+        grid-column: 1;
+        grid-row: 2;
+      }
+
+      /* Row 3: Arrow */
+      #arrow1 {
+        grid-column: 1;
+        grid-row: 3;
+      }
+
+      /* Row 4: Config */
+      #config {
+        grid-column: 1;
+        grid-row: 4;
+      }
+
+      /* Row 5: Arrow */
+      #arrow2 {
+        grid-column: 1;
+        grid-row: 5;
+      }
+
+      /* Row 6: Run Button & API (on the same row) */
+      #run {
+        grid-column: 1;
+        grid-row: 6;
+      }
+      #arrow3 {
+        grid-column: 2;
+        grid-row: 6;
+      }
+      #api {
+        grid-column: 3;
+        grid-row: 6;
+      }
+
+      /* Row 7: Arrow */
+      #arrow4 {
+        grid-column: 3;
+        grid-row: 7;
+      }
+
+      /* Row 8: Engine */
+      #engine {
+        grid-column: 3;
+        grid-row: 8;
+      }
+
+      /* Row 9: Arrow */
+      #arrow5 {
+        grid-column: 3;
+        grid-row: 9;
+      }
+
+      /* Row 10: Collect & Review (on the same row) */
+      #review {
+        grid-column: 1;
+        grid-row: 10;
+      }
+      #arrow6 {
+        grid-column: 2;
+        grid-row: 10;
+      }
+      #collect {
+        grid-column: 3;
+        grid-row: 10;
+      }
+
+      /* Row 11: Arrow */
+      #arrow7 {
+        grid-column: 1;
+        grid-row: 11;
+      }
+
+      /* Row 12: Mitigate */
+      #mitigate {
+        grid-column: 1;
+        grid-row: 12;
+      }
+
+      /* Row 13: Arrow */
+      #arrow8 {
+        grid-column: 1;
+        grid-row: 13;
+      }
+
+      /* Row 14: Download Button */
+      #download {
+        grid-column: 1;
+        grid-row: 14;
+      }
+
+      /* Row 15: Arrow */
+      #arrow9 {
+        grid-column: 1;
+        grid-row: 15;
+      }
+
+      /* Row 16: File */
+      #file {
+        grid-column: 1;
+        grid-row: 16;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>PoisonGuard - Tabular Data Pipeline</h1>
+
+    <div class="pipeline-grid">
+      <h2 class="lane-title frontend">Frontend (React/Vue.js)</h2>
+      <h2 class="lane-title backend">Backend (Flask API)</h2>
+
+      <div class="block frontend" id="upload">1. Upload Data (CSV/Excel)</div>
+
+      <div class="arrow down" id="arrow1"></div>
+
+      <div class="block frontend" id="config">2. Data Configuration UI</div>
+
+      <div class="arrow down" id="arrow2"></div>
+
+      <div class="block frontend" id="run">3. "Run Analysis" Button</div>
+      <div
+        class="arrow right"
+        id="arrow3"
+        data-label="Send Data + Config"
+      ></div>
+      <div class="block backend" id="api">4. Backend API: /sanitize</div>
+
+      <div class="arrow down" id="arrow4"></div>
+
+      <div class="block-group backend" id="engine">
+        <strong>5. Sanitization Engine</strong>
+        <div class="sub-block">Phase 1: Gatekeeper</div>
+        <div class="sub-block">Phase 2: Detective</div>
+        <div class="sub-block">Phase 3: Interrogator</div>
+      </div>
+
+      <div class="arrow down" id="arrow5"></div>
+
+      <div class="block frontend" id="review">
+        7. Display Results & Review UI
+      </div>
+      <div class="arrow left" id="arrow6" data-label="Results JSON"></div>
+      <div class="block backend" id="collect">6. Collect All Flagged Rows</div>
+
+      <div class="arrow down" id="arrow7"></div>
+
+      <div class="block frontend" id="mitigate">
+        8. User Mitigation (Keep/Remove)
+      </div>
+
+      <div class="arrow down" id="arrow8"></div>
+
+      <div class="block frontend" id="download">
+        9. "Download Cleaned Data" Button
+      </div>
+
+      <div class="arrow down" id="arrow9"></div>
+
+      <div class="block frontend" id="file">10. Cleaned Data File Download</div>
+    </div>
+  </body>
+</html>
