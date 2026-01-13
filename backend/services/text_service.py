@@ -68,12 +68,12 @@ class TextDataService:
             if not (min_len <= len(text) <= max_len):
                 self._flag_row(index, f"Phase 1: Length Violation ({len(text)} chars)")
                 continue
-            if self.p1_settings.get("flag_urls", True) and url_pattern.search(text):
-                self._flag_row(index, "Phase 1: Contains URL")
-                continue
-            if self.p1_settings.get("flag_html", True) and html_pattern.search(text):
-                self._flag_row(index, "Phase 1: Contains HTML Tags")
-                continue
+            # if self.p1_settings.get("flag_urls", True) and url_pattern.search(text):
+            #     self._flag_row(index, "Phase 1: Contains URL")
+            #     continue
+            # if self.p1_settings.get("flag_html", True) and html_pattern.search(text):
+            #     self._flag_row(index, "Phase 1: Contains HTML Tags")
+            #     continue
 
             # Simplified gibberish check: very low subjectivity
             try:
@@ -152,9 +152,9 @@ class TextDataService:
         flagged_keys_int = {int(k) for k in self.flagged_rows.keys()}
         clean_indices = self.raw_df.index.difference(flagged_keys_int)
 
-        if len(clean_indices) < 20:
-            logging.warning("Skipping Phase 3: Fewer than 20 rows remaining.")
-            return
+        # if len(clean_indices) < 20:
+        #     logging.warning("Skipping Phase 3: Fewer than 20 rows remaining.")
+        #     return
 
         clean_df = self.raw_df.loc[clean_indices]
         X, y = clean_df[self.text_col], clean_df[self.target_col]
