@@ -19,7 +19,7 @@
 // } from "lucide-react";
 
 // // --- API Configuration ---
-// const FLASK_API_URL = "http://127.0.0.1:5000/api"; // Corrected IP
+// const FLASK_API_URL = "http://127.0.0.1:5000"; // Corrected IP
 // const PAGE_SIZE = 20; // For results table pagination
 
 // // --- Reusable UI Components ---
@@ -1293,6 +1293,7 @@
 // export default App;
 
 import React, { useState, useMemo } from "react";
+import InfraHeatmap from "./components/InfraHeatmap";
 import {
   Zap,
   Database,
@@ -1314,10 +1315,11 @@ import {
 } from "lucide-react";
 
 // --- API Configuration ---
-const FLASK_API_URL = "http://127.0.0.1:5000/api"; // Corrected IP
-const PAGE_SIZE = 20; // For results table pagination
+const FLASK_API_URL = "http://localhost:5000/api";
+const PAGE_SIZE = 10;
 
 // --- Reusable UI Components ---
+
 
 const Card = ({ title, icon, children, className = "" }) => (
   <div
@@ -1565,13 +1567,14 @@ const WelcomeScreen = ({
       <div className="mb-4">
         <label className="block text-sm mb-2 text-zinc-300">Dataset Type</label>
         <select
-          value={datasetType}
-          onChange={(e) => setDatasetType(e.target.value)}
-          className="w-full p-2 border border-zinc-600 bg-zinc-700 text-zinc-100 rounded-lg focus:ring-sky-500 focus:border-sky-500"
-        >
-          <option value="tabular">Tabular (Regression/Classification)</option>
-          <option value="text">Text (Classification)</option>
-        </select>
+  value={datasetType}
+  onChange={(e) => setDatasetType(e.target.value)}
+  className="w-full p-2 border border-zinc-600 bg-zinc-700 text-zinc-100 rounded-lg focus:ring-sky-500 focus:border-sky-500"
+>
+  <option value="tabular">Tabular (Regression/Classification)</option>
+  <option value="text">Text (Classification)</option>
+  <option value="neural">Neural Network</option>
+</select>
       </div>
       <input
         type="file"
@@ -1658,6 +1661,15 @@ const WelcomeScreen = ({
             variant="secondary"
             className="text-xs justify-start pl-4" // Align left
           >
+            <Button
+  onClick={() => handleDemoLoad("neural-network-demo")}
+  disabled={isLoading}
+  variant="secondary"
+  className="text-xs justify-start pl-4"
+>
+  <Zap className="w-4 h-4 mr-2 flex-shrink-0" />
+  Neural Network Poison Detection
+</Button>
             <FileText className="w-4 h-4 mr-2 flex-shrink-0" /> 20 Newsgroups
             Classification
           </Button>
@@ -2190,6 +2202,7 @@ const App = () => {
   const [textCol, setTextCol] = useState("");
   const [flaggedRows, setFlaggedRows] = useState({});
   const [metrics, setMetrics] = useState(null);
+  const [modelResult, setModelResult] = useState(null);
 
   const handleApiCall = async (apiCall) => {
     setIsLoading(true);
@@ -2240,9 +2253,15 @@ const App = () => {
           };
         }
       });
-      const newDatasetType = demoType.startsWith("tabular")
-        ? "tabular"
-        : "text";
+      let newDatasetType = "text";
+
+if (demoType.startsWith("tabular")) {
+  newDatasetType = "tabular";
+} else if (demoType.startsWith("text")) {
+  newDatasetType = "text";
+} else if (demoType.startsWith("neural")) {
+  newDatasetType = "neural";
+}
       setDatasetType(newDatasetType);
       const safeColumnInfo = Array.isArray(data.columnInfo)
         ? data.columnInfo
@@ -2293,6 +2312,8 @@ const App = () => {
 
   const handleFileUpload = (file) =>
     handleApiCall(async () => {
+        // Neural Network Upload Fix (MOVE HERE)
+    
       const formData = new FormData();
       formData.append("file", file);
       formData.append("dataset_type", datasetType);
@@ -2301,6 +2322,28 @@ const App = () => {
         body: formData,
       });
       const data = await response.json();
+    {
+if (file.name.endsWith(".pt") || file.name.endsWith(".pth") || file.name.endsWith(".h5")) {
+
+  setModelResult({
+    model: file.name,
+    parameters: data.parameters || "Unknown",
+    risk: data.risk || "Low",
+    type: "Neural Network"
+  });
+
+  setStage("results");
+  return;
+}
+  setFullData(data.fullData);
+  setColumnInfo(data.columnInfo);
+  setFileInfo({ filename: data.filename, rowCount: data.rowCount });
+  setStage("configuring");
+
+  setIsLoading(false);
+  
+}
+      
       if (data.error) throw new Error(data.error);
       if (!data.columnInfo || !data.fullData) {
         throw new Error(
@@ -2539,7 +2582,8 @@ const App = () => {
             resetApp={resetApp}
             handleExportCleanedData={
               handleExportCleanedData
-            } /* <-- Pass handler down */
+            } 
+            modelResult={modelResult}/* <-- Pass handler down */
           />
         );
       default:
@@ -2575,7 +2619,31 @@ const App = () => {
             </button>
           )}
         </header>
-        {renderCurrentStage()}
+       {modelResult && modelResult.type === "Neural Network" ? (
+  <div className="mb-6 p-4 bg-zinc-800 rounded-xl border border-zinc-700">
+    <h2 className="text-xl font-bold text-sky-400 mb-2">
+  Neural Network Scan Result
+</h2>
+<div style={{ marginTop: "20px", width: "100%" }}>
+  <InfraHeatmap />
+</div>
+<p className="text-zinc-300">
+  Model: <span className="text-sky-300">{modelResult.model}</span>
+</p>
+
+<p className="text-zinc-300">
+  Parameters: {modelResult.parameters}
+</p>
+
+<p className="text-green-400 mt-2">
+  Risk Level: {modelResult.risk}
+</p>
+
+  </div>
+) : (
+  renderCurrentStage()
+)}
+
       </div>
     </div>
   );
