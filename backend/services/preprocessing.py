@@ -1,5 +1,4 @@
 import pandas as pd
-import numpy as np
 from textblob import TextBlob
 from utils.enums import DataType
 
@@ -51,30 +50,7 @@ class Preprocessing:
 
         return df
 
-    # 3. Normalize numerical data
-    def normalize_data(self, df):
-        df = df.copy()
-
-        for col, col_type in self.column_types.items():
-            if col_type == DataType.NUMERICAL:
-                min_val = df[col].min()
-                max_val = df[col].max()
-
-                if max_val != min_val:
-                    df[col] = (df[col] - min_val) / (max_val - min_val)
-
-        return df
-
-    # 4. Encode categorical data
-    def encode_categorical(self, df):
-        df = df.copy()
-
-        for col, col_type in self.column_types.items():
-            if col_type == DataType.CATEGORICAL:
-                df[col] = df[col].astype("category").cat.codes
-
-        return df
-
+    # 3. text processing
     def process_text(self, df):
         for col, col_type in self.column_types.items():
             if col_type != DataType.TEXT:
@@ -101,6 +77,30 @@ class Preprocessing:
             df[col + "_sentiment"] = df[col].apply(
                 lambda x: TextBlob(x).sentiment.polarity if x else 0
             )
+        return df
+
+    # 4. Normalize numerical data
+    def normalize_data(self, df):
+        df = df.copy()
+
+        for col, col_type in self.column_types.items():
+            if col_type == DataType.NUMERICAL:
+                min_val = df[col].min()
+                max_val = df[col].max()
+
+                if max_val != min_val:
+                    df[col] = (df[col] - min_val) / (max_val - min_val)
+
+        return df
+
+    # 5. Encode categorical data
+    def encode_categorical(self, df):
+        df = df.copy()
+
+        for col, col_type in self.column_types.items():
+            if col_type == DataType.CATEGORICAL:
+                df[col] = df[col].astype("category").cat.codes
+
         return df
 
     # Full pipeline
