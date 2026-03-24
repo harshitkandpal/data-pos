@@ -13,14 +13,16 @@ from sklearn.linear_model import LogisticRegression
 from sklearn.pipeline import Pipeline
 from sklearn.metrics import log_loss
 from sklearn.model_selection import cross_val_predict
+from services.llm_service import LLMService
 
 
 class TextDataService:
-
-    CANARY_MODEL = Pipeline([
-        ("tfidf", TfidfVectorizer(stop_words="english", max_features=5000)),
-        ("clf", LogisticRegression(max_iter=1000, random_state=42))
-    ])
+    CANARY_MODEL = Pipeline(
+        [
+            ("tfidf", TfidfVectorizer(stop_words="english", max_features=5000)),
+            ("clf", LogisticRegression(max_iter=1000, random_state=42)),
+        ]
+    )
 
     def __init__(self, data: pd.DataFrame, config: dict):
 
@@ -54,6 +56,23 @@ class TextDataService:
         self._run_phase_2_the_detective()
         self._run_phase_3_the_interrogator()
 
+        # -----------------------------------
+        # LLM FINAL JUDGE
+        # -----------------------------------
+
+        llm = LLMService(api_key="YOUR_API_KEY")
+
+        llm_flags = llm.classify_text_rows(
+            self.raw_df,
+            text_col=self.text_col,
+            sample_size=200,
+            flagged_rows=self.flagged_rows,
+        )
+
+        self.flagged_rows = {}
+        for idx, reason in llm_flags.items():
+            self._flag_row(idx, f"LLM: {reason}")
+
         return self.flagged_rows
 
     # -----------------------------------------------
@@ -68,26 +87,24 @@ class TextDataService:
         url_pattern = re.compile(r"https?://")
 
         for idx, row in self.raw_df.iterrows():
-
             if idx in self.flagged_rows:
                 continue
 
             text = row[self.text_col]
 
-            if not(min_len <= len(text) <= max_len):
-
+            if not (min_len <= len(text) <= max_len):
                 self._flag_row(idx, "Length violation")
                 continue
 
             if url_pattern.search(text):
-
                 self._flag_row(idx, "Contains URL")
                 continue
 
             try:
-
-                if len(text.split()) > 3 and TextBlob(text).sentiment.subjectivity < 0.01:
-
+                if (
+                    len(text.split()) > 3
+                    and TextBlob(text).sentiment.subjectivity < 0.01
+                ):
                     self._flag_row(idx, "Possible gibberish")
 
             except Exception:
@@ -108,19 +125,11 @@ class TextDataService:
 
         texts = clean_df[self.text_col].tolist()
 
-        embeddings = self.sbert.encode(
-            texts,
-            batch_size=64,
-            show_progress_bar=True
-        )
+        embeddings = self.sbert.encode(texts, batch_size=64, show_progress_bar=True)
 
         embeddings = StandardScaler().fit_transform(embeddings)
 
-        iso = IsolationForest(
-            n_estimators=200,
-            contamination=0.03,
-            random_state=42
-        )
+        iso = IsolationForest(n_estimators=200, contamination=0.03, random_state=42)
 
         preds = iso.fit_predict(embeddings)
 
@@ -153,16 +162,12 @@ class TextDataService:
         folds = min(5, min_class)
 
         probs = cross_val_predict(
-            self.CANARY_MODEL,
-            X,
-            y,
-            cv=folds,
-            method="predict_proba"
+            self.CANARY_MODEL, X, y, cv=folds, method="predict_proba"
         )
 
         self.CANARY_MODEL.fit(X, y)
 
-        probs = np.clip(probs, 1e-15, 1-1e-15)
+        probs = np.clip(probs, 1e-15, 1 - 1e-15)
 
         losses = [
             log_loss([t], [p], labels=self.CANARY_MODEL.classes_)
@@ -172,6 +177,5 @@ class TextDataService:
         threshold = np.percentile(losses, 95)
 
         for idx, loss in zip(y.index, losses):
-
             if loss > threshold:
                 self._flag_row(idx, f"Suspicious label loss={loss:.2f}")

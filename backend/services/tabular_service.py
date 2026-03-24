@@ -10,7 +10,6 @@ from sklearn.metrics import log_loss
 
 
 class TabularDataService:
-
     def __init__(self, data: pd.DataFrame, config: dict):
 
         self.raw_df = data.copy()
@@ -35,7 +34,7 @@ class TabularDataService:
 
     def _flag_row(self, index, reason):
 
-        idx = int(index)
+        idx = int(index) + 2
 
         if idx not in self.flagged_rows:
             self.flagged_rows[idx] = reason
@@ -61,12 +60,10 @@ class TabularDataService:
         start_count = len(self.flagged_rows)
 
         for index, row in self.raw_df.iterrows():
-
             if int(index) in self.flagged_rows:
                 continue
 
             for col_name, cfg in self.col_configs.items():
-
                 if col_name not in row:
                     continue
 
@@ -78,9 +75,7 @@ class TabularDataService:
                 dtype = cfg.get("data_type")
 
                 if dtype == "Numerical":
-
                     try:
-
                         num = float(value)
 
                         min_val = cfg.get("min_val")
@@ -95,20 +90,17 @@ class TabularDataService:
                             break
 
                     except Exception:
-
                         self._flag_row(index, f"Type error {col_name}")
                         break
 
                 elif dtype == "Categorical":
-
                     valid = cfg.get("valid_categories")
 
                     if valid and str(value) not in map(str, valid):
-
                         self._flag_row(index, f"Invalid category {col_name}")
                         break
 
-        logging.info(f"Phase1 flagged {len(self.flagged_rows)-start_count}")
+        logging.info(f"Phase1 flagged {len(self.flagged_rows) - start_count}")
 
     # ------------------------------------------------
     # Phase 2
@@ -128,7 +120,8 @@ class TabularDataService:
         clean_df = self.raw_df.loc[clean_idx].copy()
 
         num_features = [
-            c for c in self.feature_cols
+            c
+            for c in self.feature_cols
             if self.col_configs[c]["data_type"] == "Numerical"
         ]
 
@@ -148,18 +141,16 @@ class TabularDataService:
         rows, cols = np.where(z > 4)
 
         for r, c in zip(rows, cols):
-
             idx = clean_df.iloc[r].name
             col = num_features[c]
 
             self._flag_row(idx, f"Z-score outlier {col}")
 
         if len(num_df) > 10:
-
             iso = IsolationForest(
                 n_estimators=200,
                 contamination=min(0.05, max(0.01, 1 / len(num_df))),
-                random_state=42
+                random_state=42,
             )
 
             preds = iso.fit_predict(num_df)
@@ -169,7 +160,7 @@ class TabularDataService:
             for idx in outliers:
                 self._flag_row(idx, "IsolationForest outlier")
 
-        logging.info(f"Phase2 flagged {len(self.flagged_rows)-start_count}")
+        logging.info(f"Phase2 flagged {len(self.flagged_rows) - start_count}")
 
     # ------------------------------------------------
     # Phase 3
@@ -196,7 +187,6 @@ class TabularDataService:
         model = self._get_canary_model()
 
         if self.ml_task == "classification":
-
             min_class = y.value_counts().min()
 
             if min_class < 2:
@@ -210,21 +200,19 @@ class TabularDataService:
 
             model.fit(X, y)
 
-            probs = np.clip(probs, 1e-15, 1-1e-15)
+            probs = np.clip(probs, 1e-15, 1 - 1e-15)
 
             losses = [
-                log_loss([t], [p], labels=model.classes_)
-                for t, p in zip(y, probs)
+                log_loss([t], [p], labels=model.classes_) for t, p in zip(y, probs)
             ]
 
             threshold = np.percentile(losses, 95)
 
             for idx, loss in zip(y.index, losses):
-
                 if loss > threshold:
                     self._flag_row(idx, f"Suspicious label loss={loss:.2f}")
 
-        logging.info(f"Phase3 flagged {len(self.flagged_rows)-start_count}")
+        logging.info(f"Phase3 flagged {len(self.flagged_rows) - start_count}")
 
     # ------------------------------------------------
     # Helpers
@@ -236,10 +224,7 @@ class TabularDataService:
             return LinearRegression()
 
         return LogisticRegression(
-            max_iter=2000,
-            solver="lbfgs",
-            class_weight="balanced",
-            random_state=42
+            max_iter=2000, solver="lbfgs", class_weight="balanced", random_state=42
         )
 
     def _preprocess_for_model(self, df):
@@ -258,10 +243,6 @@ class TabularDataService:
 
         scaler = StandardScaler()
 
-        X = pd.DataFrame(
-            scaler.fit_transform(X),
-            columns=X.columns,
-            index=X.index
-        )
+        X = pd.DataFrame(scaler.fit_transform(X), columns=X.columns, index=X.index)
 
         return X, y
